@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: alpha_pulse_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: alpha_pulse
+      POSTGRES_PASSWORD: alpha_pulse_dev_password
+      POSTGRES_DB: alpha_pulse_development
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    networks:
+      - alpha_pulse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alpha_pulse -d alpha_pulse_development"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: alpha_pulse_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass alpha_pulse_redis_password
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - alpha_pulse_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+    name: alpha_pulse_postgres_data
+
+  redis_data:
+    driver: local
+    name: alpha_pulse_redis_data
+  
+networks:
+  alpha_pulse_network:
+    driver: bridge
+    name: alpha_pulse_network
